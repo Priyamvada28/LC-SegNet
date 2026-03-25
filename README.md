@@ -29,7 +29,7 @@ Boundary supervision is incorporated to improve edge localization and segmentati
 Clone the repository and install dependencies:
 
 ```bash
-git clone <your-repo-link>
+git clone https://github.com/Priyamvada28/LC-SegNet
 cd Lcseg_net
 pip install -r requirements.txt
 ```
