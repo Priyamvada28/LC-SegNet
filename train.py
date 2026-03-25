@@ -84,6 +84,10 @@ def train():
         for imgs, masks in train_loader:
             imgs, masks = imgs.to(device), masks.to(device)
 
+            masks = masks.float()
+            if masks.max() > 1.0:
+                masks = masks / 255.0
+
             # ---- Forward ----
             pred_mask, pred_boundary = model(imgs)
 
@@ -149,6 +153,9 @@ def train():
             #         torchvision.utils.save_image(mask_img.unsqueeze(0), save_path)
 
         # ---- loss ----
+                masks = masks.float()
+                if masks.max() > 1.0:
+                    masks = masks / 255.0
                 loss, logs = criterion(pred_mask, masks)
                 val_loss += loss.item()
 

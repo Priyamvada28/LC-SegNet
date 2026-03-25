@@ -35,6 +35,12 @@ class SegmentationDataset(Dataset):
             augmented = self.transform(image=image, mask=mask)
             image = augmented['image']
             mask = augmented['mask']
+             # ⚡ Ensure mask is float in [0,1] and has channel dim
+            mask = mask.float()
+            if mask.max() > 1.0:
+                mask = mask / 255.0
+            if mask.dim() == 2:
+                mask = mask.unsqueeze(0)
         else:
             # Default resizing & normalization if no transform
             image = cv2.resize(image, (256, 256))
