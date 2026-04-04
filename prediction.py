@@ -62,7 +62,7 @@ def predict_and_evaluate(image_dir, mask_dir, output_dir, model_path):
             continue
 
         img_path = os.path.join(image_dir, img_name)
-        mask_name = os.path.splitext(img_name)[0] + ".jpg"
+        mask_name = os.path.splitext(img_name)[0] + "_segmentation.png"
         mask_path = os.path.join(mask_dir, mask_name)
 
         # ---- preprocess ----
@@ -79,7 +79,7 @@ def predict_and_evaluate(image_dir, mask_dir, output_dir, model_path):
 
         # ---- prediction ----
         with torch.no_grad():
-            pred_mask = model(image)
+            pred_mask = model(image, return_boundary=False)
 
         # ---- metrics ----
         if gt_mask is not None:
@@ -110,8 +110,10 @@ def predict_and_evaluate(image_dir, mask_dir, output_dir, model_path):
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     predict_and_evaluate(
-        image_dir="data/test/images",
-        mask_dir="data/test/masks",
+     
+        image_dir="/home/meduser/ISIC2018_Task1-2_Test_Input",
+        mask_dir="/home/meduser/ISIC2018_Task1_Test_GroundTruth",
+    
         output_dir="predictions",
         model_path="checkpoints/best_model.pth"
     )

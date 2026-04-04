@@ -37,7 +37,8 @@ class LCSegNet(nn.Module):
         # -------- Boundary Head (only used during training) --------
         self.boundary_head = nn.Conv2d(64, 1, kernel_size=1)
 
-    def forward(self, x):
+    def forward(self, x , return_boundary=True):
+        self._return_boundary = return_boundary
         # Save original input size
         input_size = x.shape[2:]
 
@@ -68,7 +69,7 @@ class LCSegNet(nn.Module):
         # print("pred_mask before return:", seg_mask.shape)
       
         # -------- Boundary Head (ONLY during training) --------
-        if self.training:
+        if self.training or self._return_boundary:
             boundary_map = self.boundary_head(features)
             boundary_map = F.interpolate(boundary_map, size=input_size, mode='bilinear', align_corners=False)
             return seg_mask, boundary_map

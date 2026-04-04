@@ -40,14 +40,15 @@ class FSFBlock(nn.Module):
 
         # ----- 5. Low-frequency region -----
         B, C, H, W = Freq.shape
-        h_low = int(H * self.low_freq_ratio)
-        w_low = int(W * self.low_freq_ratio)
+        h_low = max(1, int(H * self.low_freq_ratio))
+        w_low = max(1, int(W * self.low_freq_ratio))
 
         F_low = Freq[:, :, :h_low, :w_low]
 
-        # ----- 6. Compute mean & std -----
-        mu = F_low.mean(dim=(2, 3), keepdim=True)
-        sigma = F_low.std(dim=(2, 3), keepdim=True) + 1e-6
+        # ----- 6. Compute mean & std on real part -----
+        F_low_real = F_low.real
+        mu = F_low_real.mean(dim=(2, 3), keepdim=True)
+        sigma = F_low_real.std(dim=(2, 3), keepdim=True) + 1e-6
 
         # ----- 7. Resampling (training only) -----
         if self.training:
@@ -57,11 +58,14 @@ class FSFBlock(nn.Module):
             mu_hat = mu + eps_mu * sigma
             sigma_hat = sigma + eps_sigma * sigma
 
-            F_low = (F_low - mu) / sigma
-            F_low = F_low * sigma_hat + mu_hat
+            eps = 1e-4
+            F_low_real = (F_low_real - mu) / (sigma + eps)
+            F_low_real = F_low_real * sigma_hat + mu_hat
+
+            # Keep imaginary part unchanged
+            F_low = torch.complex(F_low_real, F_low.imag)
 
         # ----- 8. Replace low-frequency -----
-        # Create a copy of Freq and replace low-frequency region
         Freq_new = Freq.clone()
         Freq_new[:, :, :h_low, :w_low] = F_low
         Freq = Freq_new
@@ -69,7 +73,7 @@ class FSFBlock(nn.Module):
         # ----- 9. IFFT -----
         out = torch.fft.ifft2(Freq, norm='ortho').real
 
-        # ----- 10. Channel reduction (VERY IMPORTANT) -----
+        # ----- 10. Channel reduction -----
         out = self.channel_reduce(out)
 
         return out

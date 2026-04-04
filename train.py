@@ -39,26 +39,17 @@ def train():
     model = LCSegNet().to(device)
 
     # -------- Dataset --------
-    # dataset = SegmentationDataset("data/train/images", "data/train/masks")
-
-    # # 80-10-10 split
-    # train_size = int(0.8 * len(dataset))
-    # val_size = int(0.1 * len(dataset))
-    # test_size = len(dataset) - train_size - val_size
-
-    train_dataset = SegmentationDataset("data/train/images", "data/train/masks", transform=train_transform)
-    val_dataset   = SegmentationDataset("data/val/images", "data/val/masks", transform=val_transform)
+    base_path = "/home/meduser"
+   
+    train_dataset = SegmentationDataset(f"{base_path}/ISIC2018_Task1-2_Training_Input", f"{base_path}/ISIC2018_Task1_Training_GroundTruth", transform=train_transform)
+    val_dataset   = SegmentationDataset(f"{base_path}/ISIC2018_Task1-2_Validation_Input", f"{base_path}/ISIC2018_Task1_Validation_GroundTruth", transform=val_transform)
     
 
     train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)    
     val_loader   = DataLoader(val_dataset, batch_size=8, shuffle=False)
     
 
-    # train_dataset, val_dataset, _ = random_split(dataset, [train_size, val_size, test_size])
-
-    # train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
-    # val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
-
+    
     # -------- Loss & Optimizer --------
     criterion = HybridLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
@@ -120,43 +111,14 @@ def train():
             for imgs, masks in val_loader:
                 imgs, masks = imgs.to(device), masks.to(device)
 
-                pred_mask = model(imgs)
+                pred_mask,pred_boundary = model(imgs)
 
-                # ---- save predicted masks ----
-    #             for i in range(pred_mask.shape[0]):
-    # # Define save path first
-    #                 save_path = os.path.join("results", f"epoch{epoch}_val_sample{i}.png")
-    
-    # # Convert logits to [0,1]
-    #                 mask_img = torch.sigmoid(pred_mask[i])   # [1,H,W], float
-    #                 mask_img = (mask_img > 0.5).float()      # Binarize mask
-
-    # # Option 1: Save using PIL (scaled to 0-255)
-    #                 from PIL import Image
-    #                 mask_img_pil = (mask_img * 255).byte()   # scale to 0-255 and convert to byte
-    #                 Image.fromarray(mask_img_pil.cpu().squeeze(0).numpy()).save(save_path)
-
-    # Option 2: Save using torchvision (expects float 0-1)
-    # mask_img = mask_img.cpu().unsqueeze(0)  # [1,H,W]
-    # torchvision.utils.save_image(mask_img, save_path)
-            #     for i in range(pred_mask.shape[0]):
-            # # Convert logits to [0,1]
-            #         mask_img = torch.sigmoid(pred_mask[i])  # [1,H,W]
-            #         mask_img = (mask_img > 0.5).float()
-            #         mask_img = mask_img * 255
-            #         mask_img = mask_img.byte()
-            #         from PIL import Image
-            #         Image.fromarray(mask_img.cpu().squeeze(0).numpy()).save(save_path)
-            #         mask_img = mask_img.cpu().squeeze(0)    # remove channel dim
-
-            #         save_path = os.path.join("results", f"epoch{epoch}_val_sample{i}.png")
-            #         torchvision.utils.save_image(mask_img.unsqueeze(0), save_path)
-
+               
         # ---- loss ----
                 masks = masks.float()
                 if masks.max() > 1.0:
                     masks = masks / 255.0
-                loss, logs = criterion(pred_mask, masks)
+                loss, logs = criterion(pred_mask, masks,pred_boundary)
                 val_loss += loss.item()
 
         # ---- metrics ----
@@ -195,17 +157,17 @@ def train():
             os.makedirs("results", exist_ok=True)
 
             # Save validation masks for this best epoch
-            with torch.no_grad():
-                for imgs, masks in val_loader:
-                    imgs, masks = imgs.to(device), masks.to(device)
-                    pred_mask = model(imgs)
-                    for i in range(pred_mask.shape[0]):
-                        save_path = os.path.join("results", f"best_val_sample{i}.png")
-                        mask_img = torch.sigmoid(pred_mask[i])
-                        mask_img = (mask_img > 0.5).float()
-                        from PIL import Image
-                        mask_img_pil = (mask_img * 255).byte()
-                        Image.fromarray(mask_img_pil.cpu().squeeze(0).numpy()).save(save_path)
+            # with torch.no_grad():
+            #     for imgs, masks in val_loader:
+            #         imgs, masks = imgs.to(device), masks.to(device)
+            #         pred_mask = model(imgs)
+            #         for i in range(pred_mask.shape[0]):
+            #             save_path = os.path.join("results", f"best_val_sample{i}.png")
+            #             mask_img = torch.sigmoid(pred_mask[i])
+            #             mask_img = (mask_img > 0.5).float()
+            #             from PIL import Image
+            #             mask_img_pil = (mask_img * 255).byte()
+            #             Image.fromarray(mask_img_pil.cpu().squeeze(0).numpy()).save(save_path)
 
             patience_counter = 0
         else:

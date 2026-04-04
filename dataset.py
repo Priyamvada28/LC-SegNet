@@ -20,7 +20,11 @@ class SegmentationDataset(Dataset):
     def __getitem__(self, idx):
         img_name = self.images[idx]
         img_path = os.path.join(self.image_dir, img_name)
-        mask_path = os.path.join(self.mask_dir, img_name)
+
+        # Generate mask filename by adding '_segmentation' before extension
+        base_name = os.path.splitext(img_name)[0]  # ISIC_0012335
+        mask_name = base_name + "_segmentation.png"
+        mask_path = os.path.join(self.mask_dir, mask_name)
 
         image = cv2.imread(img_path)
         mask = cv2.imread(mask_path, 0)  # grayscale mask
@@ -35,7 +39,7 @@ class SegmentationDataset(Dataset):
             augmented = self.transform(image=image, mask=mask)
             image = augmented['image']
             mask = augmented['mask']
-             # ⚡ Ensure mask is float in [0,1] and has channel dim
+            # ⚡ Ensure mask is float in [0,1] and has channel dim
             mask = mask.float()
             if mask.max() > 1.0:
                 mask = mask / 255.0
